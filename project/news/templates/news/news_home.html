@@ -1,0 +1,75 @@
+{% extends 'new_portal/default.html'%}
+
+<!-- Загружаем теги с переводами, без этой строки ничего не будет работать -->
+{% load i18n %}
+{% load tz %} <!-- не забываем загрузить тег для работы с часовыми поясами -->
+
+{% load custom_filters %}
+
+{% load custom_tags %}<!--Импортируем модуль с нашим тегом из custom_tags.py-->
+
+{% block title %}{% trans "Новости на сайте" %}{% endblock %}
+
+{% block content %}
+
+<!-- Если сейчас больше чем 19 или же меньше 7, то выводим тёмную тему, иначе выводим светлую -->
+    <style>
+        body {background-color: {% if current_time.hour >= 19 or current_time.hour <= 7 %} darkcyan {% else %} powderblue {% endif %};}
+    </style>
+
+    <div class="features">
+
+        {% get_current_timezone as TIME_ZONE %}
+        <form action="" method="POST">
+            {% csrf_token %}
+            <label for="timezone">{% trans "Часовой пояс" %}:</label>
+            <select name="timezone">
+                {% for tz in timezones %}
+                <option value="{{ tz }}"{% if tz == TIME_ZONE %} selected{% endif %}>{{ tz }}</option>
+                {% endfor %}
+            </select>
+            <input type="submit" value='{% trans "Найти" %}'>
+        </form>
+
+        {{ TIME_ZONE }}
+        {{ current_time|timezone:TIME_ZONE }} <!-- Отображаем время в выбранном часовом поясе  -->
+
+
+        <h1>{% trans "Новости на сайте" %}</h1>
+        {% if record %}
+            {% for el in record %}
+                <div class="alert alert-warning">
+                    <h3>{{ el.title|censorship }}</h3>
+                    <p>{{ el.full_text|censorship|truncatechars:20 }}</p>
+                    <p>{{ el.data|date:'Y.M.d' }}</p>
+                    <a href="{% url 'news_id' el.id %}" class="btn btn-warning">{% trans "Читать полностью" %}</a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p> {% trans "Новоcтей нет!" %}</p>
+        {% endif %}
+
+        <!--Добавляем пагинацию на страницу-->
+
+       <!--Информация о предыдущих страницах-->
+       {% if page_obj.has_previous %}
+           <a href="?page=1">1</a>
+           {% if page_obj.previous_page_number != 1 %}
+               ...
+               <a href="?page={{ page_obj.previous_page_number }}">{{ page_obj.previous_page_number }}</a>
+           {% endif %}
+       {% endif %}
+
+       <!--Информация о текущей странице-->
+       {{ page_obj.number }}
+
+       <!--Информация о следующих страницах-->
+       {% if page_obj.has_next %}
+           <a href="?page={{ page_obj.next_page_number }}">{{ page_obj.next_page_number }}</a>
+           {% if paginator.num_pages != page_obj.next_page_number %}
+               ...
+               <a href="?page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+           {% endif %}
+       {% endif %}
+    </div>
+{% endblock %}
